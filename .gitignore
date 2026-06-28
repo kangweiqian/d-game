@@ -27,7 +27,18 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
 
+# 视频文件（太大，使用CDN或对象存储）
+public/videos/*.mp4
+public/videos/*.MP4
+
+# 部署包
+deploy-package.zip
+
+# 临时文件
+*.tmp
+*.tmp*
 # vercel
 .vercel
 

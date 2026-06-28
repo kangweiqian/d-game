@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFE066"/>
+      <stop offset="30%" style="stop-color:#FFD700"/>
+      <stop offset="60%" style="stop-color:#FFA500"/>
+      <stop offset="100%" style="stop-color:#FF8C00"/>
+    </linearGradient>
+    <linearGradient id="goldGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="100%" style="stop-color:#DAA520"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <circle cx="100" cy="100" r="92" fill="url(#goldGrad)" filter="url(#glow)" opacity="0.95"/>
+  
+  <path d="M100 28 
+           C65 28 38 55 38 90 
+           C38 125 60 152 100 162 
+           C135 152 158 125 158 90 
+           C158 72 150 56 135 42 
+           L115 62 
+           C125 68 132 78 132 90 
+           C132 110 118 125 100 125 
+           C82 125 68 110 68 90 
+           C68 72 82 58 100 58 
+           C108 58 115 60 120 65 
+           L135 42 
+           C124 33 112 28 100 28 Z" 
+        fill="#0a0a0f" opacity="0.9"/>
+  
+  <path d="M100 42 
+           L112 32 L122 40 L116 52 
+           C138 58 150 72 152 90 
+           L162 85 L156 100 L146 98 
+           C144 115 134 128 120 135 
+           L124 145 L112 148 L108 138 
+           C100 142 90 142 80 138 
+           L68 142 L62 130 L76 124 
+           C66 112 60 98 64 82 
+           L50 78 L56 65 L70 70 
+           C78 55 90 46 100 42 Z" 
+        fill="url(#goldGrad)" 
+        filter="url(#glow)"/>
+  
+  <circle cx="88" cy="85" r="5" fill="#0a0a0f"/>
+  <circle cx="112" cy="85" r="5" fill="#0a0a0f"/>
+  
+  <path d="M80 108 Q100 122 120 108" stroke="#0a0a0f" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>

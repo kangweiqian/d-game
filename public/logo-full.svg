@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 70" width="280" height="70">
+  <defs>
+    <linearGradient id="logoGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFE066"/>
+      <stop offset="30%" style="stop-color:#FFD700"/>
+      <stop offset="60%" style="stop-color:#FFA500"/>
+      <stop offset="100%" style="stop-color:#FF8C00"/>
+    </linearGradient>
+    <filter id="logoGlow">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <g transform="translate(0, 0)">
+    <circle cx="30" cy="35" r="30" fill="url(#logoGold)" filter="url(#logoGlow)" opacity="0.95"/>
+    <path d="M30 10 C19 10 10 21 10 35 C10 49 19 58 30 62 C41 58 50 49 50 35 C50 28 47 22 42 16 L35 24 C38 26 40 30 40 35 C40 43 36 48 30 48 C24 48 20 43 20 35 C20 27 24 22 30 22 C32 22 35 23 36 25 L42 16 C38 12 34 10 30 10 Z" 
+          fill="#0a0a0f" opacity="0.9"/>
+    <path d="M30 15 L34 11 L37 14 L35 19 C41 20 45 25 46 32 L49 30 L47 36 L44 35 C43 41 40 46 36 49 L37 53 L34 54 L33 50 C31 51 29 51 27 50 L23 52 L21 48 L25 46 C22 42 20 37 22 30 L17 29 L19 24 L23 26 C26 18 28 16 30 15 Z" 
+          fill="url(#logoGold)" 
+          filter="url(#logoGlow)"/>
+    <circle cx="26" cy="30" r="2" fill="#0a0a0f"/>
+    <circle cx="34" cy="30" r="2" fill="#0a0a0f"/>
+  </g>
+  
+  <text x="68" y="45" font-family="Georgia, 'Times New Roman', serif" font-size="36" font-weight="bold" fill="url(#logoGold)" letter-spacing="2" filter="url(#logoGlow)">
+    D-GAME
+  </text>
+</svg>

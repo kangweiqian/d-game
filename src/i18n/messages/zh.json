@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "home": "首页",
+    "rankings": "排行榜",
+    "search": "搜索游戏",
+    "recharge": "充值",
+    "language": "语言"
+  },
+  "home": {
+    "hero_title": "发现好游戏",
+    "hero_title_highlight": "玩你所爱",
+    "hero_subtitle": "东南亚最大的手游平台，AI智能推荐，海量游戏随心玩",
+    "ai_button": "让AI帮你找游戏",
+    "hot_games": "热门推荐",
+    "new_games": "新游速递",
+    "view_all": "查看全部",
+    "ranking_entry_title": "游戏排行榜",
+    "ranking_entry_subtitle": "看看大家都在玩什么",
+    "tiktok_ranking": "TikTok 热游榜",
+    "google_ranking": "Google Play 榜",
+    "wuxia_ranking": "武侠类游戏排行榜",
+    "instant_ranking": "点击即玩小游戏排行",
+    "video_feed": "游戏视频"
+  },
+  "rankings": {
+    "title": "游戏排行榜",
+    "subtitle": "发现最受欢迎的手游",
+    "tiktok": "TikTok 热游榜",
+    "google_play": "Google Play 榜",
+    "wuxia": "武侠类游戏",
+    "instant": "点击即玩小游戏",
+    "hot": "热门榜",
+    "new": "新游榜",
+    "download": "下载榜",
+    "rating": "评分榜",
+    "revenue": "收入榜",
+    "rank": "排名",
+    "game": "游戏",
+    "downloads": "下载量",
+    "rating": "评分",
+    "genre": "类型"
+  },
+  "game": {
+    "download": "下载游戏",
+    "recharge": "游戏充值",
+    "developer": "开发商",
+    "publisher": "发行商",
+    "genre": "类型",
+    "size": "大小",
+    "version": "版本",
+    "rating": "评分",
+    "downloads": "下载量",
+    "screenshots": "游戏截图",
+    "description": "游戏介绍",
+    "reviews": "玩家评论",
+    "view_more": "查看更多"
+  },
+  "ai": {
+    "title": "AI 游戏推荐",
+    "subtitle": "告诉我你的喜好，精准匹配好游戏",
+    "placeholder": "发消息或按住说话...",
+    "send": "发送",
+    "voice": "语音",
+    "voice_input": "语音输入中...",
+    "thinking": "AI 正在思考...",
+    "recommend": "为你精选推荐",
+    "try_again": "换一批",
+    "welcome": "你好呀！我是你的专属游戏推荐官 🎮\n告诉我你喜欢的游戏类型、画风、玩法...\n比如「画质好的武侠手游」「休闲解压的小游戏」\n我来为你精准匹配最合适的游戏~",
+    "examples": [
+      "推荐几款画质好的武侠手游",
+      "适合上班摸鱼的休闲小游戏",
+      "不氪金也能玩的良心手游",
+      "最近热门的新游戏有哪些"
+    ]
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "加载失败",
+    "retry": "重试",
+    "more": "更多",
+    "back": "返回"
+  },
+  "search": {
+    "title": "搜索结果",
+    "no_result": "没有找到相关游戏",
+    "try_keyword": "试试其他关键词"
+  }
+}

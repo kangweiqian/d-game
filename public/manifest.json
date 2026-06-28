@@ -1,0 +1,58 @@
+{
+  "name": "D-GAME - 东南亚手游发行平台",
+  "short_name": "D-GAME",
+  "description": "东南亚最大的手游平台，AI智能推荐，海量游戏随心玩",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "orientation": "portrait",
+  "categories": ["games", "entertainment"],
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "D-GAME Home"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "热门游戏",
+      "short_name": "热门",
+      "description": "查看当前热门游戏",
+      "url": "/#hot",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "排行榜",
+      "short_name": "排行",
+      "description": "查看游戏排行榜",
+      "url": "/rankings",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "搜索游戏",
+      "short_name": "搜索",
+      "description": "搜索你喜欢的游戏",
+      "url": "/search",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "home": "Home",
+    "rankings": "Rankings",
+    "search": "Search games",
+    "recharge": "Recharge",
+    "language": "Language"
+  },
+  "home": {
+    "hero_title": "Discover Your Next Favorite Game",
+    "hero_title_highlight": "",
+    "hero_subtitle": "Southeast Asia's largest mobile game platform with AI-powered recommendations",
+    "ai_button": "Let AI Find Games",
+    "hot_games": "Hot Games",
+    "new_games": "New Games",
+    "view_all": "View All",
+    "ranking_entry_title": "Game Rankings",
+    "ranking_entry_subtitle": "See what everyone is playing",
+    "tiktok_ranking": "TikTok Hot Games",
+    "google_ranking": "Google Play Top",
+    "wuxia_ranking": "Wuxia Games Ranking",
+    "instant_ranking": "Instant Play Games",
+    "video_feed": "Game Videos"
+  },
+  "rankings": {
+    "title": "Game Rankings",
+    "subtitle": "Discover the most popular mobile games",
+    "tiktok": "TikTok Hot",
+    "google_play": "Google Play",
+    "wuxia": "Wuxia Games",
+    "instant": "Instant Games",
+    "hot": "Hot Rank",
+    "new": "New Games",
+    "download": "Top Downloads",
+    "rating": "Top Rated",
+    "revenue": "Top Grossing",
+    "rank": "Rank",
+    "game": "Game",
+    "downloads": "Downloads",
+    "rating": "Rating",
+    "genre": "Genre"
+  },
+  "game": {
+    "download": "Download",
+    "recharge": "Recharge",
+    "developer": "Developer",
+    "publisher": "Publisher",
+    "genre": "Genre",
+    "size": "Size",
+    "version": "Version",
+    "rating": "Rating",
+    "downloads": "Downloads",
+    "screenshots": "Screenshots",
+    "description": "Description",
+    "reviews": "Reviews",
+    "view_more": "View More"
+  },
+  "ai": {
+    "title": "AI Game Recommend",
+    "subtitle": "Tell me your preferences, find perfect games",
+    "placeholder": "Send a message or press and hold to talk...",
+    "send": "Send",
+    "voice": "Voice",
+    "voice_input": "Listening...",
+    "thinking": "AI is thinking...",
+    "recommend": "Recommended for you",
+    "try_again": "Try again",
+    "welcome": "Hi! I'm your personal game recommender 🎮\nTell me your favorite game types, art styles, gameplay...\nLike \"wuxia games with great graphics\" or \"casual relaxing games\"\nI'll find the perfect games for you~",
+    "examples": [
+      "Recommend wuxia games with good graphics",
+      "Casual games for relaxing at work",
+      "Good free-to-play mobile games",
+      "What are the popular new games"
+    ]
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Load failed",
+    "retry": "Retry",
+    "more": "More",
+    "back": "Back"
+  },
+  "search": {
+    "title": "Search Results",
+    "no_result": "No games found",
+    "try_keyword": "Try other keywords"
+  }
+}
