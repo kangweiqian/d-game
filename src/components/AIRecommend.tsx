@@ -159,10 +159,11 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
     setIsRecording(false);
   }, []);
 
-  const handlePlayGame = useCallback((gameId: string) => {
-    onClose();
-    router.push(`/game/${gameId}`);
-  }, [onClose, router]);
+  const handlePlayGame = useCallback((appStoreUrl?: string) => {
+    if (appStoreUrl) {
+      window.open(appStoreUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, []);
 
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -281,7 +282,7 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: gameIdx * 0.1 }}
                         className="flex items-center gap-3 p-3 rounded-xl bg-dark-700/80 hover:bg-dark-600/80 transition-colors cursor-pointer border border-white/5"
-                        onClick={() => handlePlayGame(game.id)}
+                        onClick={() => handlePlayGame(game.appStoreUrl)}
                       >
                         <img
                           src={game.icon || game.cover}
@@ -316,10 +317,10 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
                           className="px-3 py-1.5 rounded-lg gold-gradient-bg text-dark-900 text-xs font-bold shrink-0 hover:scale-105 active:scale-95 transition-transform"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handlePlayGame(game.id);
+                            handlePlayGame(game.appStoreUrl);
                           }}
                         >
-                          {locale === 'zh' ? '玩一玩' : 'Play'}
+                          {locale === 'zh' ? '下载' : 'Download'}
                         </button>
                       </motion.div>
                     ))}
@@ -517,10 +518,10 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handlePlayGame(game.id);
+                                handlePlayGame(game.appStoreUrl);
                               }}
                             >
-                              {locale === 'zh' ? '玩一玩' : 'Play'}
+                              {locale === 'zh' ? '下载' : 'Download'}
                             </button>
                           </motion.a>
                         ))}

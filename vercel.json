@@ -3,7 +3,7 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["hnd1"],
+  "regions": ["hkg1"],
   "headers": [
     {
       "source": "/videos/(.*)",

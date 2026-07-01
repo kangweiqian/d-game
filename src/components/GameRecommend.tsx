@@ -860,11 +860,15 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
                       {locale === 'zh' ? `${game.downloads} 下载` : `${game.downloadsEn} downloads`}
                     </span>
                   </div>
-                  <Link href={`/game/${game.id}`}>
+                  <a
+                    href={game.appStoreUrl || `#`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <button className="px-4 py-2 rounded-xl gold-gradient-bg text-dark-900 text-xs font-bold hover:scale-105 active:scale-95 transition-transform shrink-0">
-                      {locale === 'zh' ? '玩一玩' : 'Play'}
+                      {locale === 'zh' ? '下载' : 'Download'}
                     </button>
-                  </Link>
+                  </a>
                 </div>
               </div>
             </div>
