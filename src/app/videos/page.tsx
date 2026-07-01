@@ -1,50 +1,48 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Sparkles } from 'lucide-react';
-import GameRecommend from '../../components/GameRecommend';
-import AIRecommend from '../../components/AIRecommend';
-import BottomNav from '../../components/BottomNav';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { X } from 'lucide-react';
+import VideoFeed from '../../components/VideoFeed';
 import { getHotGames } from '../../data/games';
-import { useI18n } from '../../context/I18nContext';
 
-export default function VideosPage() {
-  const { locale } = useI18n();
+function VideosContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [initialIndex, setInitialIndex] = useState(0);
   const hotGames = getHotGames();
-  const [aiOpen, setAiOpen] = useState(false);
+
+  useEffect(() => {
+    const gameId = searchParams.get('gameId');
+    if (gameId) {
+      const index = hotGames.findIndex(g => g.id === gameId);
+      if (index !== -1) {
+        setInitialIndex(index);
+      }
+    }
+  }, [searchParams, hotGames]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <div className="px-4 pt-4 pb-2">
-        <button
-          onClick={() => setAiOpen(true)}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-primary-500/10 via-dark-600/50 to-dark-700/50 border border-white/10 hover:border-primary-500/30 transition-all group"
-        >
-          <div className="w-10 h-10 rounded-xl gold-gradient-bg flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-dark-900" />
-          </div>
-          <div className="flex-1 text-left">
-            <h3 className="text-sm font-bold text-white group-hover:text-primary-400 transition-colors">
-              {locale === 'zh' ? '✨ AI 智能找游戏' : '✨ AI Game Finder'}
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {locale === 'zh' ? '告诉我你喜欢的类型，帮你精准推荐' : 'Tell me what you like, I will find the best games'}
-            </p>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-dark-600 flex items-center justify-center text-gray-400 group-hover:text-primary-400 transition-colors">
-            <Search className="w-4 h-4" />
-          </div>
-        </button>
-      </div>
-      <div className="flex-1 overflow-hidden">
-        <GameRecommend games={hotGames} />
-      </div>
-      <BottomNav />
+    <div className="fixed inset-0 z-[100] bg-black">
+      {/* Close button - with safe area for iPhone notch */}
+      <button
+        onClick={() => router.back()}
+        className="absolute right-4 z-50 p-2 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors"
+        style={{ top: 'calc(env(safe-area-inset-top) + 1rem)' }}
+      >
+        <X className="w-6 h-6" />
+      </button>
 
-      <AIRecommend
-        isOpen={aiOpen}
-        onClose={() => setAiOpen(false)}
-      />
+      {/* Video Feed */}
+      <VideoFeed games={hotGames} fullscreen initialIndex={initialIndex} />
     </div>
+  );
+}
+
+export default function VideosPage() {
+  return (
+    <Suspense fallback={<div className="fixed inset-0 z-[100] bg-black" />}>
+      <VideosContent />
+    </Suspense>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Star, Play, Sparkles, ChevronRight, Shuffle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Star, Play, Sparkles, Shuffle, Maximize2, Pause, Volume2, VolumeX, Brain, Zap } from 'lucide-react';
 import { Game } from '../lib/types';
 import { useI18n } from '../context/I18nContext';
 import Danmaku from './Danmaku';
@@ -11,6 +12,8 @@ interface GameRecommendProps {
   games: Game[];
   onAIRecommendClick?: () => void;
   onRandomGameClick?: () => void;
+  onPersonalityTestClick?: () => void;
+  onHoroscopeClick?: () => void;
 }
 
 // 从图片提取主色调的函数
@@ -292,8 +295,9 @@ const gameReviews: Record<string, { user: string; userEn: string; avatar: string
   ],
 };
 
-export default function GameRecommend({ games, onAIRecommendClick, onRandomGameClick }: GameRecommendProps) {
+export default function GameRecommend({ games, onAIRecommendClick, onRandomGameClick, onPersonalityTestClick, onHoroscopeClick }: GameRecommendProps) {
   const { locale } = useI18n();
+  const router = useRouter();
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [visibleIndices, setVisibleIndices] = useState<Set<number>>(new Set());
   const playingIndexRef = useRef<number | null>(null);
@@ -301,6 +305,16 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // 新增：控制组件显示状态
+  const [showControls, setShowControls] = useState<Record<number, boolean>>({});
+  // 默认静音
+  const [isMuted, setIsMuted] = useState<Record<number, boolean>>(
+    Object.fromEntries(games.map((_, i) => [i, true]))
+  );
+  const [progress, setProgress] = useState<Record<number, number>>({});
+  const [duration, setDuration] = useState<Record<number, number>>({});
+  const controlsTimerRefs = useRef<Map<number, NodeJS.Timeout>>(new Map());
 
   useEffect(() => {
     playingIndexRef.current = playingIndex;
@@ -401,6 +415,7 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
       // 正在播放，点击则暂停
       video.pause();
       setPlayingIndex(null);
+      setShowControls(prev => ({ ...prev, [index]: true }));
     } else {
       // 暂停上一个视频
       if (playingIndex !== null) {
@@ -412,6 +427,7 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
       // 播放当前视频
       video.play().catch(() => {});
       setPlayingIndex(index);
+      setShowControls(prev => ({ ...prev, [index]: true }));
     }
   }, [playingIndex]);
 
@@ -420,42 +436,116 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
     return playingIndex !== index;
   }, [playingIndex]);
 
+  // 显示控制组件
+  const showControlsTemporarily = useCallback((index: number) => {
+    setShowControls(prev => ({ ...prev, [index]: true }));
+    if (controlsTimerRefs.current.has(index)) {
+      clearTimeout(controlsTimerRefs.current.get(index)!);
+    }
+    controlsTimerRefs.current.set(index, setTimeout(() => {
+      setShowControls(prev => ({ ...prev, [index]: false }));
+    }, 3000));
+  }, []);
+
+  // 处理视频点击
+  const handleVideoClick = useCallback((index: number) => {
+    const video = videoRefs.current.get(index);
+    if (!video) return;
+
+    if (playingIndex === index && !video.paused) {
+      // 视频正在播放，点击则显示控制组件
+      showControlsTemporarily(index);
+    } else {
+      // 暂停或未播放，点击则播放
+      if (playingIndex !== null && playingIndex !== index) {
+        const prevVideo = videoRefs.current.get(playingIndex);
+        if (prevVideo) prevVideo.pause();
+      }
+      video.play().catch(() => {});
+      setPlayingIndex(index);
+      setShowControls(prev => ({ ...prev, [index]: true }));
+    }
+  }, [playingIndex, showControlsTemporarily]);
+
+  // 切换静音
+  const toggleMute = useCallback((index: number) => {
+    const video = videoRefs.current.get(index);
+    if (video) {
+      video.muted = !video.muted;
+      setIsMuted(prev => ({ ...prev, [index]: video.muted }));
+    }
+  }, []);
+
+  // 跳转到全屏播放页
+  const handleFullscreen = useCallback((gameId: string) => {
+    router.push(`/videos?gameId=${gameId}`);
+  }, [router]);
+
+  // 格式化时间
+  const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 处理进度条点击
+  const handleSeek = useCallback((index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const video = videoRefs.current.get(index);
+    if (video && video.duration) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const newTime = percent * video.duration;
+      video.currentTime = newTime;
+      setProgress(prev => ({ ...prev, [index]: newTime }));
+    }
+  }, []);
+
+  // 处理视频时间更新
+  const handleTimeUpdate = useCallback((index: number) => {
+    const video = videoRefs.current.get(index);
+    if (video) {
+      setProgress(prev => ({ ...prev, [index]: video.currentTime }));
+      setDuration(prev => ({ ...prev, [index]: video.duration || 0 }));
+    }
+  }, []);
+
+  // 处理元数据加载
+  const handleLoadedMetadata = useCallback((index: number) => {
+    const video = videoRefs.current.get(index);
+    if (video) {
+      setDuration(prev => ({ ...prev, [index]: video.duration || 0 }));
+    }
+  }, []);
+
   return (
     <div ref={scrollContainerRef} className="h-full overflow-y-auto scrollbar-hide pb-20">
       <div className="px-4 pt-4">
-        <div className="flex gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {/* AI 智能找游戏 */}
           <button
             onClick={onAIRecommendClick}
-            className="flex-1 relative overflow-hidden rounded-2xl h-20 group"
+            className="relative overflow-hidden rounded-2xl h-20 group"
           >
-            {/* 主背景 */}
             <div className="absolute inset-0 bg-gradient-to-br from-dark-700 via-dark-800 to-dark-700" />
-            {/* 光泽效果 */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/[0.03] via-transparent to-transparent" />
-            {/* 边框 */}
             <div className="absolute inset-0 rounded-2xl border border-white/[0.06]" />
-            {/* hover 光效 */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/0 to-primary-500/0 group-hover:from-primary-500/10 group-hover:to-primary-500/5 transition-all duration-300" />
             
-            <div className="relative z-10 flex items-center gap-3 h-full px-3">
+            <div className="relative z-10 flex items-center gap-2 h-full px-3">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl gold-gradient-bg flex items-center justify-center shadow-lg shadow-amber-500/20">
-                  <Sparkles className="w-5 h-5 text-dark-900" />
+                <div className="w-9 h-9 rounded-xl gold-gradient-bg flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <Sparkles className="w-4 h-4 text-dark-900" />
                 </div>
-                {/* 图标光晕 */}
-                <div className="absolute inset-0 w-10 h-10 rounded-xl gold-gradient-bg blur-md opacity-50 -z-10" />
               </div>
               <div className="flex-1 text-left min-w-0">
                 <span className="text-xs font-bold text-white block truncate">
                   {locale === 'zh' ? 'AI 找游戏' : 'AI Finder'}
                 </span>
                 <span className="text-[10px] text-gray-500 block truncate mt-0.5">
-                  {locale === 'zh' ? '精准推荐 · 智能匹配' : 'Smart Picks · AI Match'}
+                  {locale === 'zh' ? '精准推荐' : 'Smart Picks'}
                 </span>
-              </div>
-              <div className="w-6 h-6 rounded-full bg-dark-600/80 flex items-center justify-center border border-white/10 group-hover:border-primary-400/30 transition-colors">
-                <ChevronRight className="w-3 h-3 text-gray-500 group-hover:text-primary-400 transition-colors" />
               </div>
             </div>
           </button>
@@ -463,35 +553,80 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
           {/* 抽一款小游戏 */}
           <button
             onClick={onRandomGameClick}
-            className="flex-1 relative overflow-hidden rounded-2xl h-20 group"
+            className="relative overflow-hidden rounded-2xl h-20 group"
           >
-            {/* 主背景 */}
             <div className="absolute inset-0 bg-gradient-to-br from-dark-700 via-dark-800 to-dark-700" />
-            {/* 光泽效果 */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/[0.03] via-transparent to-transparent" />
-            {/* 边框 */}
             <div className="absolute inset-0 rounded-2xl border border-white/[0.06]" />
-            {/* hover 光效 */}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/10 group-hover:to-pink-500/5 transition-all duration-300" />
             
-            <div className="relative z-10 flex items-center gap-3 h-full px-3">
+            <div className="relative z-10 flex items-center gap-2 h-full px-3">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                  <Shuffle className="w-5 h-5 text-white" />
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                  <Shuffle className="w-4 h-4 text-white" />
                 </div>
-                {/* 图标光晕 */}
-                <div className="absolute inset-0 w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 blur-md opacity-50 -z-10" />
               </div>
               <div className="flex-1 text-left min-w-0">
                 <span className="text-xs font-bold text-white block truncate">
                   {locale === 'zh' ? '抽小游戏' : 'Random'}
                 </span>
                 <span className="text-[10px] text-gray-500 block truncate mt-0.5">
-                  {locale === 'zh' ? '试试手气 · 惊喜不断' : 'Try Luck · Surprises'}
+                  {locale === 'zh' ? '试试手气' : 'Try Luck'}
                 </span>
               </div>
-              <div className="w-6 h-6 rounded-full bg-dark-600/80 flex items-center justify-center border border-white/10 group-hover:border-purple-400/30 transition-colors">
-                <ChevronRight className="w-3 h-3 text-gray-500 group-hover:text-purple-400 transition-colors" />
+            </div>
+          </button>
+
+          {/* 游戏人格测试 */}
+          <button
+            onClick={onPersonalityTestClick}
+            className="relative overflow-hidden rounded-2xl h-20 group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-dark-700 via-dark-800 to-dark-700" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/[0.03] via-transparent to-transparent" />
+            <div className="absolute inset-0 rounded-2xl border border-white/[0.06]" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/10 group-hover:to-purple-500/5 transition-all duration-300" />
+            
+            <div className="relative z-10 flex items-center gap-2 h-full px-3">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                  <Brain className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <span className="text-xs font-bold text-white block truncate">
+                  {locale === 'zh' ? '人格测试' : 'Personality'}
+                </span>
+                <span className="text-[10px] text-gray-500 block truncate mt-0.5">
+                  {locale === 'zh' ? '测测你的类型' : 'Find Your Type'}
+                </span>
+              </div>
+            </div>
+          </button>
+
+          {/* 今日游戏运势 */}
+          <button
+            onClick={onHoroscopeClick}
+            className="relative overflow-hidden rounded-2xl h-20 group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-dark-700 via-dark-800 to-dark-700" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/[0.03] via-transparent to-transparent" />
+            <div className="absolute inset-0 rounded-2xl border border-white/[0.06]" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-orange-500/0 to-amber-500/0 group-hover:from-orange-500/10 group-hover:to-amber-500/5 transition-all duration-300" />
+            
+            <div className="relative z-10 flex items-center gap-2 h-full px-3">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                  <Zap className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <span className="text-xs font-bold text-white block truncate">
+                  {locale === 'zh' ? '今日运势' : 'Horoscope'}
+                </span>
+                <span className="text-[10px] text-gray-500 block truncate mt-0.5">
+                  {locale === 'zh' ? '每日一签' : 'Daily Luck'}
+                </span>
               </div>
             </div>
           </button>
@@ -508,13 +643,13 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
               key={game.id}
               ref={(el) => setCardRef(index, el)}
               data-index={index}
-              className="rounded-2xl overflow-hidden"
+              className="rounded-2xl overflow-hidden bg-dark-800/50"
             >
               <div className="flex gap-3">
                 {/* 左侧：图标、视频和标题 - 可点击进入详情页 */}
                 <Link
                   href={`/game/${game.id}`}
-                  className={`w-[34%] shrink-0 rounded-xl p-2.5 bg-gradient-to-br ${colorClass} flex flex-col relative overflow-hidden cursor-pointer`}
+                  className={`w-[34%] shrink-0 rounded-xl p-2.5 bg-gradient-to-br ${colorClass} flex flex-col relative overflow-hidden cursor-pointer aspect-[3/4]`}
                   style={{
                     backgroundColor: bgColor ? `${bgColor}33` : undefined,
                   }}
@@ -531,7 +666,7 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
                   )}
 
                   {/* 图片 */}
-                  <div className="relative z-10 w-full aspect-square rounded-lg overflow-hidden">
+                  <div className="relative z-10 w-full aspect-square rounded-[28px] overflow-hidden">
                     <img
                       src={game.icon || game.cover}
                       alt={locale === 'zh' ? game.name : game.nameEn}
@@ -543,13 +678,16 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
                   <h3 className="font-bold text-white text-xs truncate mt-2 text-center relative z-10">
                     {locale === 'zh' ? game.name : game.nameEn}
                   </h3>
-                  <div className="text-center relative z-10">
-                    {/* 显示游戏类型 + 标签，用 · 分隔，最多2个 */}
+                  <div className="text-center relative z-10 overflow-hidden">
+                    {/* 显示游戏类型 + 标签，用 · 分隔，标签过长则只显示1个 */}
                     {(() => {
                       const genreText = locale === 'zh' ? game.genre : game.genreEn;
                       const allTags = locale === 'zh' ? game.tags : game.tagsEn;
                       const filteredTags = allTags.filter(tag => !genreText.toLowerCase().includes(tag.toLowerCase()));
-                      const displayTags = [genreText, ...filteredTags.slice(0, 1)];
+                      const firstTag = filteredTags[0];
+                      const maxLength = locale === 'zh' ? 8 : 22;
+                      const shouldShowTwo = firstTag && (genreText.length + firstTag.length + 3) <= maxLength;
+                      const displayTags = shouldShowTwo ? [genreText, firstTag] : [genreText];
                       return (
                         <span className="text-[10px] font-medium text-white/70 whitespace-nowrap">
                           {displayTags.join(' · ')}
@@ -559,10 +697,10 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
                   </div>
                 </Link>
 
-                <div className="flex-1 rounded-xl overflow-hidden relative bg-dark-800 aspect-video">
+                <div className="flex-1 rounded-xl overflow-hidden relative bg-dark-800 aspect-video min-h-[180px]">
                   {/* 游戏宣传图 - 只有可见时才带 Ken Burns 动效 */}
                   <img
-                    src={game.screenshots?.[1] || game.screenshots?.[0] || game.cover}
+                    src={game.screenshots?.[(parseInt(game.id) + 1) % Math.max(game.screenshots?.length || 1, 1)] || game.screenshots?.[0] || game.cover}
                     alt=""
                     className={`w-full h-full object-cover absolute inset-0 transition-transform duration-700 ${
                       visibleIndices.has(index) ? (
@@ -578,7 +716,7 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
                       <video
                         ref={(el) => setVideoRef(index, el)}
                         src={game.video}
-                        poster={game.screenshots?.[1] || game.screenshots?.[0] || game.cover}
+                        poster={game.screenshots?.[(parseInt(game.id) + 1) % Math.max(game.screenshots?.length || 1, 1)] || game.screenshots?.[0] || game.cover}
                         loop
                         playsInline
                         muted
@@ -586,15 +724,97 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
                         className="w-full h-full object-cover absolute inset-0 z-0"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement?.querySelector('img')?.classList.remove('opacity-0');
                         }}
+                        onClick={() => handleVideoClick(index)}
+                        onTimeUpdate={() => handleTimeUpdate(index)}
+                        onLoadedMetadata={() => handleLoadedMetadata(index)}
                       />
+                      
+                      {/* 点击区域 - 用于显示/隐藏控制 */}
+                      <div 
+                        className="absolute inset-0 z-10 cursor-pointer"
+                        onClick={() => handleVideoClick(index)}
+                      />
+                      
+                      {/* 播放按钮 - 未播放时显示 */}
                       {isVideoPaused(index) && (
-                        <div
-                          className="absolute inset-0 z-10 flex items-center justify-center cursor-pointer bg-black/30"
+                        <div 
+                          className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 cursor-pointer"
                           onClick={() => togglePlay(index)}
                         >
                           <div className="w-14 h-14 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center border-2 border-white/40 shadow-2xl hover:scale-110 transition-transform animate-float">
                             <Play className="w-6 h-6 text-white fill-white ml-1" />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* 控制组件 */}
+                      {game.video && showControls[index] && playingIndex === index && (
+                        <div 
+                          className="absolute inset-0 z-30 bg-gradient-to-t from-black/80 via-black/30 to-transparent"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* 顶部控制栏 */}
+                          <div className="absolute top-3 right-3 flex gap-2 z-40">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                toggleMute(index);
+                              }}
+                              className="p-2 rounded-full bg-black/60 backdrop-blur-sm text-white hover:bg-black/80 transition-colors"
+                            >
+                              {isMuted[index] ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          
+                          {/* 底部控制栏 */}
+                          <div className="absolute bottom-0 left-0 right-0 p-3 z-40">
+                            {/* 进度条 */}
+                            <div
+                              className="w-full h-1 bg-white/30 rounded-full cursor-pointer mb-2 group"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSeek(index, e);
+                              }}
+                            >
+                              <div
+                                className="h-full gold-gradient-bg rounded-full relative"
+                                style={{ 
+                                  width: duration[index] ? `${(progress[index] / duration[index]) * 100}%` : '0%' 
+                                }}
+                              >
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePlay(index);
+                                  }}
+                                  className="text-white hover:text-primary-400 transition-colors"
+                                >
+                                  {playingIndex === index ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
+                                </button>
+                                <span className="text-white/80 text-xs">
+                                  {formatTime(progress[index] || 0)} / {formatTime(duration[index] || 0)}
+                                </span>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFullscreen(game.id);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full gold-gradient-bg text-dark-900 text-xs font-semibold hover:scale-105 active:scale-95 transition-transform"
+                              >
+                                <Maximize2 className="w-3 h-3" />
+                                {locale === 'zh' ? '全屏播放' : 'Fullscreen'}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -625,22 +845,23 @@ export default function GameRecommend({ games, onAIRecommendClick, onRandomGameC
                 </div>
               </div>
 
-              <div className="px-3 pt-3 pb-4" style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(15, 15, 15, 0.8) 100%)' }}>
-                <p className="text-xs text-gray-400 line-clamp-2 mb-3">
+              <div className="px-3 pt-3 pb-4 bg-dark-800/80">
+                <p className="text-xs text-gray-400 line-clamp-2 mb-3 min-h-[3rem]">
                   {locale === 'zh' ? game.description : game.descriptionEn}
                 </p>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
-                    <span className="text-xs font-bold text-white">{game.rating}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
+                      <span className="text-xs font-bold text-white">{game.rating}</span>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {locale === 'zh' ? `${game.downloads} 下载` : `${game.downloadsEn} downloads`}
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-400">
-                    {locale === 'zh' ? `${game.downloads} 下载` : `${game.downloadsEn} downloads`}
-                  </span>
-                  <div className="flex-1" />
                   <Link href={`/game/${game.id}`}>
-                    <button className="px-4 py-2 rounded-xl gold-gradient-bg text-dark-900 text-xs font-bold hover:scale-105 active:scale-95 transition-transform">
+                    <button className="px-4 py-2 rounded-xl gold-gradient-bg text-dark-900 text-xs font-bold hover:scale-105 active:scale-95 transition-transform shrink-0">
                       {locale === 'zh' ? '玩一玩' : 'Play'}
                     </button>
                   </Link>

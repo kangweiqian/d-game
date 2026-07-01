@@ -26,7 +26,7 @@ ${gameListStr}
 
 回复规则：
 1. 如果用户询问游戏相关的问题或寻求游戏推荐，请从游戏库中推荐最适合的2-3款游戏
-2. 如果用户明确表示不想玩游戏、不想要推荐、没兴趣等否定意图，请友好回应，表示理解，不要推荐任何游戏
+2. 如果用户明确表示不想玩游戏、不想要推荐、没兴趣、不打游戏、不喜欢游戏等否定意图，请友好回应，表示理解，绝对不要推荐任何游戏
 3. 如果用户的问题与游戏无关，可以先友好回应用户的问题，然后礼貌地引导用户询问游戏相关内容
 4. 推荐游戏时，每款游戏格式：[游戏ID] 游戏名称 | 类型 | 推荐理由（30字以内）
 5. 不推荐游戏时，不要使用 [数字] 格式，正常对话即可
@@ -39,7 +39,7 @@ ${gameListStr}
 
 Response rules:
 1. If the user asks about games or wants game recommendations, recommend 2-3 most suitable games from the library
-2. If the user clearly expresses negative intent such as not wanting to play games, not wanting recommendations, not interested, etc., respond friendly and understandingly, do NOT recommend any games
+2. If the user clearly expresses negative intent such as not wanting to play games, not wanting recommendations, not interested, not a gamer, don't play games, don't like games, etc., respond friendly and understandingly, do NOT recommend any games
 3. If the user's question is not game-related, respond friendly first, then politely guide back to game topics
 4. When recommending games, format: [Game ID] Game Name | Genre | Reason (within 30 words)
 5. When not recommending games, don't use [number] format, just chat normally
@@ -104,8 +104,8 @@ function detectIntent(message: string, locale: 'zh' | 'en'): IntentType {
   const lowerMsg = message.toLowerCase().trim();
 
   const negativeKeywords = locale === 'zh'
-    ? ['不想', '不要', '别', '不玩', '没兴趣', '不感兴趣', '不需要', '算了', '不用了', '拉倒', '不想玩', '不想打', '不想玩游戏', '不想打游戏', '不推荐', '别推荐']
-    : ['don\'t want', 'don\'t play', 'no thanks', 'not interested', 'don\'t recommend', 'no game', 'don\'t feel like', 'nah', 'pass', 'not in the mood'];
+    ? ['不想', '不要', '别', '不玩', '不打', '没兴趣', '不感兴趣', '不需要', '算了', '不用了', '拉倒', '不想玩', '不想打', '不想玩游戏', '不想打游戏', '不打游戏', '不打手游', '不喜欢游戏', '不爱玩', '没意思', '无聊', '不适合我', '不合适', '不推荐', '别推荐', '不要推', '不用推']
+    : ['don\'t want', 'don\'t play', 'don\'t like game', 'not a gamer', 'no thanks', 'not interested', 'don\'t recommend', 'no game', 'don\'t feel like', 'nah', 'pass', 'not in the mood', 'boring', 'not my thing', 'don\'t play games', 'not into games', 'not really a gamer'];
 
   const gameKeywords = locale === 'zh'
     ? ['游戏', '手游', '推荐', '好玩', '玩什么', '找游戏', '有什么', 'rpg', 'moba', '休闲', '策略', '动作', '角色', '二次元', '动漫', '武侠', '仙侠', '竞技', '对战', '新游', '热门', '射击', 'fps', '竞速', '赛车', '沙盒', '生存', 'slg', '棋牌', '卡牌', '体育', '足球', '篮球', '建造', '吃鸡', '大逃杀']

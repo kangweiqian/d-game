@@ -6,6 +6,8 @@ import BottomNav from '../components/BottomNav';
 import GameRecommend from '../components/GameRecommend';
 import AIRecommend from '../components/AIRecommend';
 import RandomGameDrawer from '../components/RandomGameDrawer';
+import PersonalityTest from '../components/PersonalityTest';
+import DailyHoroscope from '../components/DailyHoroscope';
 import { useI18n } from '../context/I18nContext';
 import { getHotGames } from '../data/games';
 
@@ -14,6 +16,8 @@ export default function DiscoverPage() {
   const hotGames = getHotGames();
   const [aiOpen, setAiOpen] = useState(false);
   const [randomOpen, setRandomOpen] = useState(false);
+  const [personalityOpen, setPersonalityOpen] = useState(false);
+  const [horoscopeOpen, setHoroscopeOpen] = useState(false);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -45,6 +49,8 @@ export default function DiscoverPage() {
             games={hotGames}
             onAIRecommendClick={() => setAiOpen(true)}
             onRandomGameClick={() => setRandomOpen(true)}
+            onPersonalityTestClick={() => setPersonalityOpen(true)}
+            onHoroscopeClick={() => setHoroscopeOpen(true)}
           />
         </div>
       </main>
@@ -59,6 +65,18 @@ export default function DiscoverPage() {
       <RandomGameDrawer
         isOpen={randomOpen}
         onClose={() => setRandomOpen(false)}
+        games={hotGames}
+      />
+
+      <PersonalityTest
+        isOpen={personalityOpen}
+        onClose={() => setPersonalityOpen(false)}
+        games={hotGames}
+      />
+
+      <DailyHoroscope
+        isOpen={horoscopeOpen}
+        onClose={() => setHoroscopeOpen(false)}
         games={hotGames}
       />
     </div>

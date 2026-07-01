@@ -23,6 +23,7 @@ export interface Game {
   price?: number;
   isHot?: boolean;
   isNew?: boolean;
+  appStoreUrl?: string;
   tags: string[];
   tagsEn: string[];
 }

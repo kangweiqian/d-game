@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import Navigation from '../../components/Navigation';
-import GameCard from '../../components/GameCard';
+import VideoCard from '../../components/VideoCard';
 import AIRecommend, { AIFloatingButton } from '../../components/AIRecommend';
 import BottomNav from '../../components/BottomNav';
 import { useI18n } from '../../context/I18nContext';
@@ -101,7 +101,7 @@ function SearchContent() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <GameCard game={game} />
+                  <VideoCard game={game} />
                 </motion.div>
               ))}
             </motion.div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, Shuffle, Play, Star } from 'lucide-react';
 import { Game } from '@/lib/types';
 import { useI18n } from '@/context/I18nContext';
@@ -12,6 +13,7 @@ interface RandomGameDrawerProps {
 }
 
 export default function RandomGameDrawer({ isOpen, onClose, games }: RandomGameDrawerProps) {
+  const router = useRouter();
   const { locale } = useI18n();
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -142,6 +144,12 @@ export default function RandomGameDrawer({ isOpen, onClose, games }: RandomGameD
             {locale === 'zh' ? '换一个' : 'Shuffle'}
           </button>
           <button
+            onClick={() => {
+              if (currentGame) {
+                onClose();
+                router.push(`/game/${currentGame.id}`);
+              }
+            }}
             className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl gold-gradient-bg text-dark-900 text-sm font-bold hover:scale-105 active:scale-95 transition-transform"
           >
             <Play className="w-4 h-4 fill-dark-900" />

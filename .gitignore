@@ -29,10 +29,6 @@ yarn-error.log*
 .env*.local
 .env
 
-# 视频文件（太大，使用CDN或对象存储）
-public/videos/*.mp4
-public/videos/*.MP4
-
 # 部署包
 deploy-package.zip
 
@@ -41,6 +37,9 @@ deploy-package.zip
 *.tmp*
 # vercel
 .vercel
+
+# trae
+.trae
 
 # typescript
 *.tsbuildinfo

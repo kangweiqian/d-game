@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Send, Mic, Sparkles, X, MessageCircle, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '../context/I18nContext';
 import { ChatMessage, Game } from '../lib/types';
 import { callQwenAPI } from '../lib/qwen';
-import { getHotGames } from '../data/games';
 
 interface AIRecommendProps {
   isOpen: boolean;
@@ -46,6 +46,7 @@ declare global {
 }
 
 export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit = false }: AIRecommendProps) {
+  const router = useRouter();
   const { t, locale } = useI18n();
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -158,6 +159,11 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
     setIsRecording(false);
   }, []);
 
+  const handlePlayGame = useCallback((gameId: string) => {
+    onClose();
+    router.push(`/game/${gameId}`);
+  }, [onClose, router]);
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -222,46 +228,6 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4 mb-2"
           >
-            {(() => {
-              const hotGames = getHotGames();
-              const featuredGame = hotGames[0];
-              if (!featuredGame) return null;
-              return (
-                <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  className="inline-block rounded-2xl p-4 bg-gradient-to-br from-purple-500/20 via-dark-700/50 to-dark-800/80 border border-purple-500/20 w-full"
-                >
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={featuredGame.icon || featuredGame.cover}
-                      alt={locale === 'zh' ? featuredGame.name : featuredGame.nameEn}
-                      className="w-16 h-16 rounded-xl object-cover border-2 border-white/20 shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-white text-lg truncate">
-                        {locale === 'zh' ? featuredGame.name : featuredGame.nameEn}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-dark-600/70 text-gray-300 border border-white/10">
-                          {locale === 'zh' ? featuredGame.genre : featuredGame.genreEn}
-                        </span>
-                        <span className="flex items-center gap-0.5 text-xs text-primary-400">
-                          <Star className="w-3 h-3 fill-primary-400" />
-                          {featuredGame.rating}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2 line-clamp-1">
-                        {locale === 'zh' ? featuredGame.downloads : featuredGame.downloadsEn} 下载
-                      </p>
-                    </div>
-                    <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-bold shrink-0 hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-green-500/25">
-                      {locale === 'zh' ? '预约' : 'Pre-register'}
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })()}
-
             <div className="space-y-2">
               <p className="text-xs text-gray-400 px-1">
                 {locale === 'zh' ? '试试问我：' : 'Try asking:'}
@@ -315,12 +281,12 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: gameIdx * 0.1 }}
                         className="flex items-center gap-3 p-3 rounded-xl bg-dark-700/80 hover:bg-dark-600/80 transition-colors cursor-pointer border border-white/5"
-                        onClick={onClose}
+                        onClick={() => handlePlayGame(game.id)}
                       >
                         <img
                           src={game.icon || game.cover}
                           alt={locale === 'zh' ? game.name : game.nameEn}
-                          className="w-12 h-12 rounded-xl object-cover shrink-0"
+                          className="w-12 h-12 rounded-[28px] object-cover shrink-0"
                         />
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-white text-sm truncate">
@@ -346,7 +312,13 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
                             </span>
                           </div>
                         </div>
-                        <button className="px-3 py-1.5 rounded-lg gold-gradient-bg text-dark-900 text-xs font-bold shrink-0 hover:scale-105 active:scale-95 transition-transform">
+                        <button 
+                          className="px-3 py-1.5 rounded-lg gold-gradient-bg text-dark-900 text-xs font-bold shrink-0 hover:scale-105 active:scale-95 transition-transform"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlayGame(game.id);
+                          }}
+                        >
                           {locale === 'zh' ? '玩一玩' : 'Play'}
                         </button>
                       </motion.div>
@@ -458,47 +430,6 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
                   </h3>
                 </div>
 
-                {/* 推荐游戏卡片 */}
-                {(() => {
-                  const hotGames = getHotGames();
-                  const featuredGame = hotGames[0];
-                  if (!featuredGame) return null;
-                  return (
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      className="inline-block rounded-2xl p-4 bg-gradient-to-br from-purple-500/20 via-dark-700/50 to-dark-800/80 border border-purple-500/20"
-                    >
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={featuredGame.icon || featuredGame.cover}
-                          alt={locale === 'zh' ? featuredGame.name : featuredGame.nameEn}
-                          className="w-16 h-16 rounded-xl object-cover border-2 border-white/20 shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-white text-lg truncate">
-                            {locale === 'zh' ? featuredGame.name : featuredGame.nameEn}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-dark-600/70 text-gray-300 border border-white/10">
-                              {locale === 'zh' ? featuredGame.genre : featuredGame.genreEn}
-                            </span>
-                            <span className="flex items-center gap-0.5 text-xs text-primary-400">
-                              <Star className="w-3 h-3 fill-primary-400" />
-                              {featuredGame.rating}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-400 mt-2 line-clamp-1">
-                            {locale === 'zh' ? featuredGame.downloads : featuredGame.downloadsEn} 下载
-                          </p>
-                        </div>
-                        <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-bold shrink-0 hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-green-500/25">
-                          {locale === 'zh' ? '预约' : 'Pre-register'}
-                        </button>
-                      </div>
-                    </motion.div>
-                  );
-                })()}
-
                 {/* 示例问题 - 竖着排 */}
                 <div className="space-y-2">
                   <p className="text-xs text-gray-400 px-1">
@@ -581,7 +512,14 @@ export default function AIRecommend({ isOpen, onClose, mode = 'modal', autoInit 
                                 </span>
                               </div>
                             </div>
-                            <button className="px-3 py-1.5 rounded-lg gold-gradient-bg text-dark-900 text-xs font-semibold shrink-0">
+                            <button 
+                              className="px-3 py-1.5 rounded-lg gold-gradient-bg text-dark-900 text-xs font-semibold shrink-0 hover:scale-105 active:scale-95 transition-transform"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handlePlayGame(game.id);
+                              }}
+                            >
                               {locale === 'zh' ? '玩一玩' : 'Play'}
                             </button>
                           </motion.a>

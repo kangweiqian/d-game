@@ -93,7 +93,7 @@ export default function GameDetailPage() {
                   <img
                     src={game.icon}
                     alt={name}
-                    className="w-14 h-14 md:w-28 md:h-28 rounded-xl md:rounded-2xl object-cover border-2 md:border-4 border-dark-900 shadow-2xl"
+                    className="w-14 h-14 md:w-28 md:h-28 rounded-[28px] object-cover border-2 md:border-4 border-dark-900 shadow-2xl"
                   />
                   <div className="flex-1 min-w-0 py-1">
                     <h1 className="text-base md:text-3xl font-bold text-white mb-1 line-clamp-1">
@@ -112,11 +112,16 @@ export default function GameDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg md:rounded-xl md:py-2 gold-gradient-bg text-dark-900 font-bold active:scale-95 transition-all text-sm">
+                  <a
+                    href={game.appStoreUrl || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg md:rounded-xl md:py-2 gold-gradient-bg text-dark-900 font-bold active:scale-95 transition-all text-sm"
+                  >
                     <Download className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="hidden md:inline">{t.game.download}</span>
                     <span className="md:hidden">{locale === 'zh' ? '下载' : 'Download'}</span>
-                  </button>
+                  </a>
                   <button className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg md:rounded-xl md:py-2 glass-card text-white font-semibold active:bg-white/20 transition-all text-sm">
                     <Wallet className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="hidden md:inline">{t.game.recharge}</span>

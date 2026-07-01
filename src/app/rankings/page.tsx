@@ -132,9 +132,9 @@ export default function RankingsPage() {
                   </div>
 
                   <img
-                    src={game.cover}
+                    src={game.icon}
                     alt={locale === 'zh' ? game.name : game.nameEn}
-                    className="w-12 h-12 md:w-14 md:h-14 rounded-xl object-cover shrink-0"
+                    className="w-12 h-12 md:w-14 md:h-14 rounded-[28px] object-cover shrink-0"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

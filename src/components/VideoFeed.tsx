@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageCircle, Share2, Download, ChevronDown, ChevronUp, Play, Star, Music, Music2, Volume2, VolumeX } from 'lucide-react';
+import { Heart, MessageCircle, Download, ChevronDown, ChevronUp, Play, Pause, Star, Music, Music2, Volume2, VolumeX, Maximize2, X } from 'lucide-react';
 import { Game } from '../lib/types';
 import { useI18n } from '../context/I18nContext';
 import Danmaku from './Danmaku';
@@ -11,6 +10,7 @@ import Danmaku from './Danmaku';
 interface VideoFeedProps {
   games: Game[];
   fullscreen?: boolean;
+  initialIndex?: number;
 }
 
 const gameReviews: Record<string, { user: string; userEn: string; avatar: string; content: string; contentEn: string; likes: number }[]> = {
@@ -228,20 +228,44 @@ const gameReviews: Record<string, { user: string; userEn: string; avatar: string
   ],
 };
 
-export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps) {
+export default function VideoFeed({ games, fullscreen = false, initialIndex = 0 }: VideoFeedProps) {
   const { t, locale } = useI18n();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [direction, setDirection] = useState(0);
   const [isLiked, setIsLiked] = useState<Record<string, boolean>>({});
   const [isPaused, setIsPaused] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [_isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const touchStartY = useRef(0);
 
   const currentGame = games[currentIndex];
   const hasVideo = !!currentGame.video;
+
+  // 监听 initialIndex 变化并更新 currentIndex
+  useEffect(() => {
+    setCurrentIndex(initialIndex);
+  }, [initialIndex]);
+
+  // 显示控制组件
+  const showControlsTemporarily = useCallback(() => {
+    setShowControls(true);
+    if (controlsTimerRef.current) {
+      clearTimeout(controlsTimerRef.current);
+    }
+    controlsTimerRef.current = setTimeout(() => {
+      const video = videoRef.current;
+      if (video && !video.paused) {
+        setShowControls(false);
+      }
+    }, 3000);
+  }, []);
 
   // IntersectionObserver for auto-play when visible
   useEffect(() => {
@@ -276,6 +300,67 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
     setIsVideoLoaded(false);
   }, [currentIndex]);
 
+  // Auto-play when currentIndex changes
+  useEffect(() => {
+    if (hasVideo) {
+      const timer = setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          videoRef.current.currentTime = 0;
+          videoRef.current.play().then(() => {
+            setIsPaused(false);
+          }).catch(() => {
+            setIsPaused(true);
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex, hasVideo]);
+
+  // Sync isPaused state with video element events
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hasVideo) return;
+
+    const handlePlay = () => {
+      setIsPaused(false);
+      showControlsTemporarily();
+    };
+    const handlePause = () => {
+      setIsPaused(true);
+      setShowControls(true);
+    };
+
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+    };
+  }, [currentIndex, hasVideo, showControlsTemporarily]);
+
+  // Listen for external navigation events (from videos page)
+  useEffect(() => {
+    const handleNav = (e: CustomEvent<string>) => {
+      if (e.detail === 'prev') {
+        if (currentIndex > 0) {
+          setDirection(-1);
+          setCurrentIndex(prev => prev - 1);
+        }
+      } else if (e.detail === 'next') {
+        if (currentIndex < games.length - 1) {
+          setDirection(1);
+          setCurrentIndex(prev => prev + 1);
+        }
+      }
+    };
+
+    window.addEventListener('video-nav', handleNav as EventListener);
+    return () => window.removeEventListener('video-nav', handleNav as EventListener);
+  }, [currentIndex, games.length]);
+
   const reviews = gameReviews[currentGame.id] || [
     { user: '玩家123', avatar: '🎮', content: '这款游戏太好玩了！', likes: 999 },
     { user: '游戏达人', avatar: '⭐', content: '画质精美，五星好评', likes: 666 },
@@ -286,7 +371,6 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
     if (currentIndex < games.length - 1) {
       setDirection(1);
       setCurrentIndex(prev => prev + 1);
-      setIsPaused(true);
     }
   };
 
@@ -294,7 +378,6 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
     if (currentIndex > 0) {
       setDirection(-1);
       setCurrentIndex(prev => prev - 1);
-      setIsPaused(true);
     }
   };
 
@@ -305,23 +388,85 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
     }));
   };
 
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPaused) {
-        videoRef.current.play().catch(() => {});
-      } else {
-        videoRef.current.pause();
-      }
-      setIsPaused(!isPaused);
+  const togglePlay = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
     }
   };
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
+  const toggleMute = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const video = videoRef.current;
+    if (video) {
+      video.muted = !video.muted;
+      setIsMuted(video.muted);
     }
   };
+
+  const handleVideoClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (fullscreen) {
+      // 全屏模式下点击视频切换播放/暂停
+      if (video.paused) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    } else {
+      if (video.paused) {
+        setShowControls(true);
+      } else {
+        if (showControls) {
+          video.pause();
+        } else {
+          showControlsTemporarily();
+        }
+      }
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setProgress(videoRef.current.currentTime);
+      setDuration(videoRef.current.duration || 0);
+    }
+  };
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const video = videoRef.current;
+    if (video && video.duration) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const newTime = percent * video.duration;
+      video.currentTime = newTime;
+      setProgress(newTime);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (controlsTimerRef.current) {
+        clearTimeout(controlsTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.deltaY > 30) {
@@ -372,7 +517,7 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <AnimatePresence initial={false} custom={direction} mode="wait">
+        <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={currentGame.id}
             custom={direction}
@@ -384,7 +529,7 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
             className="absolute inset-0"
           >
             {/* Video/Image Container - 16:9 aspect ratio */}
-            <div className="absolute inset-0 flex items-center justify-center bg-black">
+            <div className="absolute inset-0 flex items-center justify-center bg-black z-0">
               {hasVideo ? (
                 <video
                   ref={videoRef}
@@ -392,10 +537,14 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
                   poster={currentGame.cover}
                   loop
                   playsInline
-                  muted={isMuted}
-                  onLoadedData={() => setIsVideoLoaded(true)}
-                  className="w-full h-full object-cover"
-                  onClick={togglePlay}
+                  autoPlay
+                  muted
+                  onLoadedData={() => { setIsVideoLoaded(true); }}
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={handleTimeUpdate}
+                  onPlay={() => setIsPaused(false)}
+                  onPause={() => setIsPaused(true)}
+                  className="w-full h-full object-cover z-0"
                 />
               ) : (
                 <img
@@ -405,6 +554,11 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
                   onClick={togglePlay}
                 />
               )}
+              {/* 透明点击层 - 覆盖整个视频区域 */}
+              <div 
+                className="absolute inset-0 z-10 cursor-pointer"
+                onClick={handleVideoClick}
+              />
             </div>
             
             {/* Play Button - Show when paused */}
@@ -413,40 +567,56 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
-                className="absolute inset-0 z-30 flex items-center justify-center cursor-pointer"
+                className="absolute inset-0 z-20 flex items-center justify-center"
                 onClick={togglePlay}
               >
-                <div className="w-20 h-20 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center border-2 border-white/40 shadow-2xl hover:scale-110 hover:bg-black/70 transition-all">
+                <div className="w-20 h-20 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center border-2 border-white/40 shadow-2xl hover:scale-110 hover:bg-black/70 transition-all cursor-pointer">
                   <Play className="w-8 h-8 text-white fill-white ml-1" />
                 </div>
               </motion.div>
             )}
             
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none z-0" />
             
             <Danmaku comments={reviews} isPlaying={!isPaused && hasVideo} locale={locale} />
             
-            <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
+            <div 
+              className="absolute left-0 right-0 p-4 flex items-center justify-between z-30"
+              style={{ top: 'env(safe-area-inset-top)' }}
+            >
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm">
                 <Play className="w-3.5 h-3.5 text-primary-400 fill-primary-400" />
                 <span className="text-xs text-white font-medium">{t.home.video_feed}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-white/60 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm">
-                  {currentIndex + 1}/{games.length}
-                </span>
-                {hasVideo && (
-                  <button
-                    onClick={toggleMute}
-                    className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
-                  >
-                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                  </button>
-                )}
-              </div>
+              {hasVideo && (
+                <button
+                  onClick={(e) => toggleMute(e)}
+                  className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+              )}
             </div>
-            
-            <div className="absolute bottom-0 left-0 right-0 p-4 pr-14">
+
+            <div 
+              className="absolute left-0 right-0 p-4 pr-14 z-30"
+              style={{ bottom: 'env(safe-area-inset-bottom)' }}
+            >
+              {/* Progress Bar */}
+              {hasVideo && (
+                <div
+                  className="w-full h-1 bg-white/30 rounded-full cursor-pointer mb-3 group z-40 relative"
+                  onClick={(e) => { e.stopPropagation(); handleSeek(e); }}
+                >
+                  <div
+                    className="h-full gold-gradient-bg rounded-full relative"
+                    style={{ width: duration ? `${(progress / duration) * 100}%` : '0%' }}
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/30 flex-shrink-0">
                   <img
@@ -466,13 +636,15 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
               </p>
               
               <div className="flex items-center gap-3">
-                <Link
-                  href={`/game/${currentGame.id}`}
+                <a
+                  href={currentGame.appStoreUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl gold-gradient-bg text-dark-900 font-semibold text-sm hover:scale-105 active:scale-95 transition-transform"
                 >
                   <Download className="w-4 h-4" />
                   {locale === 'zh' ? '立即下载' : 'Download'}
-                </Link>
+                </a>
                 <div className="flex items-center gap-1.5 px-4 py-3 rounded-full bg-white/10 backdrop-blur-sm">
                   <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
                   <span className="text-white text-sm font-semibold">{currentGame.rating}</span>
@@ -480,9 +652,12 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
               </div>
             </div>
             
-            <div className="absolute right-3 bottom-36 flex flex-col gap-5">
+            <div 
+              className="absolute right-3 flex flex-col gap-5 z-40"
+              style={{ bottom: 'calc(env(safe-area-inset-bottom) + 9rem)' }}
+            >
               <button
-                onClick={() => toggleLike(currentGame.id)}
+                onClick={(e) => { e.stopPropagation(); toggleLike(currentGame.id); }}
                 className="flex flex-col items-center gap-1"
               >
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
@@ -493,30 +668,29 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
                   <Heart className={`w-6 h-6 ${isLiked[currentGame.id] ? 'fill-current' : ''}`} />
                 </div>
                 <span className="text-white/80 text-xs">
-                  {Math.floor(Math.random() * 9000) + 1000}
+                  {/* 基于游戏ID生成固定点赞数 */}
+                  {Math.floor(parseInt(currentGame.id) * 1234.56) % 9000 + 1000}
                 </span>
               </button>
               
-              <button className="flex flex-col items-center gap-1">
-                <div className="w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
+                className="flex flex-col items-center gap-1"
+              >
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+                  showComments
+                    ? 'bg-primary-500/20 text-primary-400'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}>
                   <MessageCircle className="w-6 h-6" />
                 </div>
                 <span className="text-white/80 text-xs">
-                  {Math.floor(Math.random() * 500) + 100}
-                </span>
-              </button>
-              
-              <button className="flex flex-col items-center gap-1">
-                <div className="w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
-                  <Share2 className="w-6 h-6" />
-                </div>
-                <span className="text-white/80 text-xs">
-                  {Math.floor(Math.random() * 200) + 20}
+                  {Math.floor(parseInt(currentGame.id) * 567.89) % 500 + 100}
                 </span>
               </button>
               
               <button
-                onClick={() => setIsPaused(!isPaused)}
+                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                 className="flex flex-col items-center gap-1"
               >
                 <div className="w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
@@ -524,40 +698,82 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
                 </div>
               </button>
             </div>
+
+            {/* 评论面板 */}
+            {showComments && (
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="absolute inset-x-0 bottom-0 h-[60%] bg-black/95 backdrop-blur-md rounded-t-3xl z-50 overflow-hidden"
+                style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+              >
+                <div className="flex items-center justify-between p-4 border-b border-white/10">
+                  <h3 className="text-white font-semibold">
+                    {locale === 'zh' ? '评论' : 'Comments'} ({Math.floor(parseInt(currentGame.id) * 567.89) % 500 + 100})
+                  </h3>
+                  <button
+                    onClick={() => setShowComments(false)}
+                    className="text-white/60 hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="overflow-y-auto h-full pb-20">
+                  {reviews.map((review, idx) => (
+                    <div key={idx} className="p-4 border-b border-white/5">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">{review.avatar}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-white text-sm font-medium">
+                              {locale === 'zh' ? review.user : review.userEn}
+                            </span>
+                            <span className="text-white/40 text-xs">
+                              {idx === 0 ? '刚刚' : idx === 1 ? '5分钟前' : idx === 2 ? '1小时前' : idx === 3 ? '3小时前' : idx === 4 ? '5小时前' : '昨天'}
+                            </span>
+                          </div>
+                          <p className="text-white/80 text-sm mb-2">
+                            {locale === 'zh' ? review.content : review.contentEn}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-white/40">
+                            <button 
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 hover:text-white transition-colors"
+                            >
+                              <Heart className="w-3 h-3" />
+                              {review.likes}
+                            </button>
+                            <button 
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:text-white transition-colors"
+                            >
+                              {locale === 'zh' ? '回复' : 'Reply'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         </AnimatePresence>
-        
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-2">
-          <button
-            onClick={goPrev}
-            disabled={currentIndex === 0}
-            className={`p-1.5 rounded-full transition-all ${
-              currentIndex === 0
-                ? 'opacity-30 cursor-not-allowed'
-                : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
-          >
-            <ChevronUp className="w-5 h-5" />
-          </button>
-          <button
-            onClick={goNext}
-            disabled={currentIndex === games.length - 1}
-            className={`p-1.5 rounded-full transition-all ${
-              currentIndex === games.length - 1
-                ? 'opacity-30 cursor-not-allowed'
-                : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
-          >
-            <ChevronDown className="w-5 h-5" />
-          </button>
-        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative w-[280px] md:w-[320px] aspect-[9/16] max-h-[560px] rounded-3xl overflow-hidden bg-black">
-      <AnimatePresence initial={false} custom={direction} mode="wait">
+    <div
+      ref={containerRef}
+      className="relative w-[280px] md:w-[320px] aspect-[9/16] max-h-[560px] rounded-3xl overflow-hidden bg-black"
+      onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={currentGame.id}
           custom={direction}
@@ -577,10 +793,14 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
                 poster={currentGame.cover}
                 loop
                 playsInline
-                muted={isMuted}
-                onLoadedData={() => setIsVideoLoaded(true)}
+                autoPlay
+                muted
+                onLoadedData={() => { setIsVideoLoaded(true); }}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleTimeUpdate}
+                onPlay={() => setIsPaused(false)}
+                onPause={() => setIsPaused(true)}
                 className="w-full h-full object-cover"
-                onClick={togglePlay}
               />
             ) : (
               <img
@@ -590,6 +810,11 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
                 onClick={togglePlay}
               />
             )}
+            {/* 透明点击层 */}
+            <div 
+              className="absolute inset-0 z-10 cursor-pointer"
+              onClick={handleVideoClick}
+            />
           </div>
           
           {/* Play Button - Show when paused */}
@@ -598,7 +823,7 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 z-20 flex items-center justify-center"
               onClick={togglePlay}
             >
               <div className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30 shadow-2xl">
@@ -622,7 +847,7 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
               </span>
               {hasVideo && (
                 <button
-                  onClick={toggleMute}
+                  onClick={(e) => toggleMute(e)}
                   className="p-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
                 >
                   {isMuted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
@@ -630,6 +855,56 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
               )}
             </div>
           </div>
+
+          {hasVideo && showControls && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/50 to-transparent pt-8 pb-3 px-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Progress Bar */}
+              <div
+                className="w-full h-1 bg-white/30 rounded-full cursor-pointer mb-3 group"
+                onClick={handleSeek}
+              >
+                <div
+                  className="h-full gold-gradient-bg rounded-full relative"
+                  style={{ width: duration ? `${(progress / duration) * 100}%` : '0%' }}
+                >
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg" />
+                </div>
+              </div>
+
+              {/* Controls Row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                    className="text-white hover:text-primary-400 transition-colors"
+                  >
+                    {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+                    className="text-white hover:text-primary-400 transition-colors"
+                  >
+                    {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  </button>
+                  <span className="text-white/80 text-xs">
+                    {formatTime(progress)} / {formatTime(duration)}
+                  </span>
+                </div>
+                <button
+                  className="text-white hover:text-primary-400 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Maximize2 className="w-5 h-5" />
+                </button>
+              </div>
+            </motion.div>
+          )}
           
           <div className="absolute bottom-0 left-0 right-0 p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -651,13 +926,15 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
             </p>
             
             <div className="flex items-center gap-2">
-              <Link
-                href={`/game/${currentGame.id}`}
+              <a
+                href={currentGame.appStoreUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl gold-gradient-bg text-dark-900 font-semibold text-xs hover:scale-105 active:scale-95 transition-transform"
               >
                 <Download className="w-3.5 h-3.5" />
                 {locale === 'zh' ? '立即下载' : 'Download'}
-              </Link>
+              </a>
               <div className="flex items-center gap-1 px-2.5 py-2 rounded-full bg-white/10 backdrop-blur-sm">
                 <Star className="w-3 h-3 fill-primary-400 text-primary-400" />
                 <span className="text-white text-xs font-semibold">{currentGame.rating}</span>
@@ -678,19 +955,86 @@ export default function VideoFeed({ games, fullscreen = false }: VideoFeedProps)
                 <Heart className={`w-5 h-5 ${isLiked[currentGame.id] ? 'fill-current' : ''}`} />
               </div>
               <span className="text-white/70 text-[10px]">
-                {Math.floor(Math.random() * 9000) + 1000}
+                {Math.floor(parseInt(currentGame.id) * 1234.56) % 9000 + 1000}
               </span>
             </button>
             
-            <button className="flex flex-col items-center gap-0.5">
-              <div className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors">
-                <Share2 className="w-5 h-5" />
+            <button 
+              onClick={() => setShowComments(!showComments)}
+              className="flex flex-col items-center gap-0.5"
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                showComments
+                  ? 'bg-primary-500/20 text-primary-400'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}>
+                <MessageCircle className="w-5 h-5" />
               </div>
               <span className="text-white/70 text-[10px]">
-                {Math.floor(Math.random() * 200) + 20}
+                {Math.floor(parseInt(currentGame.id) * 567.89) % 500 + 100}
               </span>
             </button>
           </div>
+
+          {/* 评论面板 */}
+          {showComments && (
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="absolute inset-x-0 bottom-0 h-[60%] bg-black/95 backdrop-blur-md rounded-t-3xl z-50 overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-white font-semibold">
+                  {locale === 'zh' ? '评论' : 'Comments'} ({Math.floor(parseInt(currentGame.id) * 567.89) % 500 + 100})
+                </h3>
+                <button
+                  onClick={() => setShowComments(false)}
+                  className="text-white/60 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto h-full pb-20">
+                {reviews.map((review, idx) => (
+                  <div key={idx} className="p-4 border-b border-white/5">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">{review.avatar}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-white text-sm font-medium">
+                            {locale === 'zh' ? review.user : review.userEn}
+                          </span>
+                          <span className="text-white/40 text-xs">
+                            {idx === 0 ? '刚刚' : idx === 1 ? '5分钟前' : idx === 2 ? '1小时前' : idx === 3 ? '3小时前' : idx === 4 ? '5小时前' : '昨天'}
+                          </span>
+                        </div>
+                        <p className="text-white/80 text-sm mb-2">
+                          {locale === 'zh' ? review.content : review.contentEn}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-white/40">
+                          <button 
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1 hover:text-white transition-colors"
+                          >
+                            <Heart className="w-3 h-3" />
+                            {review.likes}
+                          </button>
+                          <button 
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:text-white transition-colors"
+                          >
+                            {locale === 'zh' ? '回复' : 'Reply'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </AnimatePresence>
       

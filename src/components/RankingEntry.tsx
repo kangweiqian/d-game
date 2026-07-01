@@ -82,9 +82,9 @@ export default function RankingEntry({ wuxiaGames, instantGames }: RankingEntryP
                     {index + 1}
                   </span>
                   <img
-                    src={game.cover}
+                    src={game.icon}
                     alt={locale === 'zh' ? game.name : game.nameEn}
-                    className="w-12 h-12 rounded-xl object-cover"
+                    className="w-12 h-12 rounded-[28px] object-cover"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate group-hover:text-primary-400 transition-colors">
@@ -142,9 +142,9 @@ export default function RankingEntry({ wuxiaGames, instantGames }: RankingEntryP
                     {index + 1}
                   </span>
                   <img
-                    src={game.cover}
+                    src={game.icon}
                     alt={locale === 'zh' ? game.name : game.nameEn}
-                    className="w-12 h-12 rounded-xl object-cover"
+                    className="w-12 h-12 rounded-[28px] object-cover"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate group-hover:text-primary-400 transition-colors">
